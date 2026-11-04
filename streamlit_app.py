@@ -62,12 +62,10 @@ with tab1:
                     if api_key_input:
                         genai.configure(api_key=api_key_input)
                     else:
-                        # Intenta buscar en los secretos de Streamlit si están configurados
                         if "GEMINI_API_KEY" in st.secrets:
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         else:
-                            # Fallback para pruebas locales o requerimiento explícito
-                            st.error("Falta configurar la API Key de Gemini. Inrésala arriba o configúrala en Streamlit Secrets.")
+                            st.error("Falta configurar la API Key de Gemini. Ingrésala arriba o configúrala en Streamlit Secrets.")
                             st.stop()
 
                     prompt = f"""
@@ -113,7 +111,6 @@ with tab2:
         if st.button("⏹️ Reiniciar / Detener"):
             st.session_state.timer_running = False
 
-    # Visualizador dinámico del tiempo
     timer_placeholder = st.empty()
 
     if st.session_state.get("timer_running", False):
@@ -149,7 +146,9 @@ with tab3:
             else:
                 with st.spinner("Analizando la imagen con Visión Artificial..."):
                     try:
-                        if "GEMINI_API_KEY" in st.secrets:
+                        if api_key_input:
+                            genai.configure(api_key=api_key_input)
+                        elif "GEMINI_API_KEY" in st.secrets:
                             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                         
                         vision_model = genai.GenerativeModel('gemini-1.5-flash')
