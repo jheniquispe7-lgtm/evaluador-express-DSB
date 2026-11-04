@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import pandas as pd
 import time
 
 # Configuración de la página
@@ -11,24 +10,33 @@ st.set_page_config(
     layout="wide"
 )
 
-# Título principal de la aplicación
-st.title("⚡ Evaluador Express - Unidad Educativa Daniel Sánchez Bustamante")
-st.markdown("Herramienta integral de apoyo docente: Generación de exámenes con IA, cronómetro de aula y evaluación visual.")
+# ==========================================
+# BANNER OFICIAL EN LA PARTE SUPERIOR
+# ==========================================
+try:
+    banner_img = Image.open("banner.jpg")
+    st.image(banner_img, use_container_width=True)
+except FileNotFoundError:
+    st.warning("⚠️ Sube tu archivo 'banner.jpg' al repositorio de GitHub para mostrar el banner oficial.")
 
-# Pestañas principales de la aplicación
-tab1, tab2, tab3 = st.tabs(["📝 Generador de Exámenes", "⏱️ Cronómetro de Aula", "📷 Evaluador por Imágenes"])
+# Título y descripción principal
+st.title("⚡ Evaluador Express - Unidad Educativa Daniel Sánchez Bustamante")
+st.markdown("Herramienta docente integral: Exámenes multi-versión, cronómetro de aula y escaneo rápido por cámara.")
+
+# Pestañas principales
+tab1, tab2, tab3 = st.tabs(["📝 Generador Multi-Versión", "⏱️ Examen en Línea (Cronómetro)", "📷 Escáner y Calificación Rápida"])
 
 # ==========================================
-# PESTAÑA 1: GENERADOR DE EXÁMENES CON IA
+# PESTAÑA 1: GENERADOR DE EXÁMENES MULTI-VERSIÓN
 # ==========================================
 with tab1:
-    st.header("Generador Automático de Exámenes")
-    st.markdown("Utiliza Inteligencia Artificial para crear evaluaciones personalizadas adaptadas a tus materias.")
+    st.header("📝 Generador de Exámenes con Versiones (A y B)")
+    st.markdown("Crea evaluaciones personalizadas desde documentos, enlaces o temas, generando versiones distintas para evitar copias.")
 
     col1, col2 = st.columns(2)
     with col1:
         materia = st.selectbox(
-            "Selecciona la Materia:",
+            "Materia:",
             [
                 "TTG (Técnica Tecnológica General)", 
                 "TTE (Técnica Tecnológica Especializada)", 
@@ -38,135 +46,141 @@ with tab1:
                 "Educación Física y Deportes"
             ]
         )
-        tipo_pregunta = st.selectbox(
-            "Tipo de Preguntas:",
-            ["Opción Múltiple", "Preguntas Abiertas / Desarrollo", "Mixto (Ambos)"]
-        )
+        nivel = st.selectbox("Nivel / Curso:", ["1ro de Secundaria", "2do de Secundaria", "3ro de Secundaria", "4to de Secundaria", "5to de Secundaria", "6to de Secundaria"])
+        tipo_pregunta = st.selectbox("Tipo de Preguntas:", ["Opción Múltiple", "Preguntas Abiertas / Desarrollo", "Mixto"])
 
     with col2:
-        nivel = st.selectbox("Curso / Nivel:", ["1iro de Secundaria", "2ndo de Secundaria", "3ero de Secundaria", "4to de Secundaria", "5to de Secundaria", "6to de Secundaria"])
         cantidad = st.slider("Número de preguntas:", min_value=3, max_value=15, value=5)
+        version_examen = st.selectbox("Versión a generar:", ["Versión A y Versión B (Ambas)", "Solo Versión A", "Solo Versión B"])
+        nivel_dificultad = st.select_slider("Dificultad:", options=["Básico", "Intermedio", "Avanzado"])
 
-    tema_especifico = st.text_input("Tema específico o contenido a evaluar (Ej: Redes inalámbricas, Acordes musicales, Anatomía artística...):")
+    st.markdown("---")
+    origen_fuente = st.radio("Origen del contenido:", ["Tema Escrito / Texto", "Imagen de Guía / Libro", "Enlace Web o Video"], horizontal=True)
 
-    # Configuración opcional de API Key de Gemini
-    api_key_input = st.text_input("Ingresa tu API Key de Gemini (opcional si está configurada en secretos):", type="password")
+    prompt_contenido = ""
+    imagen_subida = None
 
-    if st.button("🚀 Generar Examen"):
-        if not tema_especifico:
-            st.warning("Por favor, ingresa un tema específico para el examen.")
-        else:
-            with st.spinner("Generando evaluación con Inteligencia Artificial..."):
-                try:
-                    # Configurar API Key
-                    if api_key_input:
-                        genai.configure(api_key=api_key_input)
-                    else:
-                        if "GEMINI_API_KEY" in st.secrets:
-                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        else:
-                            st.error("Falta configurar la API Key de Gemini. Ingrésala arriba o configúrala en Streamlit Secrets.")
-                            st.stop()
+    if origen_fuente == "Tema Escrito / Texto":
+        prompt_contenido = st.text_area("Escribe el contenido o tema base:")
+    elif origen_fuente == "Imagen de Guía / Libro":
+        imagen_subida = st.file_uploader("Sube foto de referencia:", type=["png", "jpg", "jpeg"])
+    elif origen_fuente == "Enlace Web o Video":
+        url_input = st.text_input("Pega el enlace web o YouTube:")
+        prompt_contenido = f"Extrae la información de este link: {url_input}"
 
-                    prompt = f"""
-                    Eres un asistente docente experto en el sistema educativo de Bolivia. 
-                    Genera una evaluación formal y pedagógica para la materia de {materia}, nivel {nivel}.
-                    Tema: {tema_especifico}.
-                    Tipo de preguntas: {tipo_pregunta}.
-                    Cantidad de preguntas: {cantidad}.
-                    
-                    Incluye al final una sección con las respuestas correctas o pautas de evaluación detalladas.
-                    Formatea la salida de manera limpia utilizando Markdown.
-                    """
+    api_key_input = st.text_input("API Key de Gemini (opcional si está en Secrets):", type="password")
 
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    response = model.generate_content(prompt)
+    if st.button("🚀 Generar Exámenes (Versiones)"):
+        with st.spinner("Generando versiones del examen con IA..."):
+            try:
+                if api_key_input:
+                    genai.configure(api_key=api_key_input)
+                elif "GEMINI_API_KEY" in st.secrets:
+                    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                instrucciones = f"""
+                Actúa como profesor de {materia} para {nivel}. 
+                Genera exámenes formales con el contenido proporcionado. 
+                Cantidad: {cantidad} preguntas. Tipo: {tipo_pregunta}. 
+                Si el usuario pidió 'Versión A y Versión B', redacta ambas versiones con preguntas equivalentes pero ordenadas o redactadas de forma distinta para evitar copias. Incluye solucionario para el maestro al final.
+                """
 
-                    st.success("¡Examen generado con éxito!")
-                    st.markdown("---")
-                    st.markdown(response.text)
+                if imagen_subida:
+                    res = model.generate_content([instrucciones, Image.open(imagen_subida)])
+                else:
+                    res = model.generate_content(f"{instrucciones}\n\nFuente: {prompt_contenido}")
 
-                except Exception as e:
-                    st.error(f"Ocurrió un error al generar el examen: {e}")
+                st.success("¡Exámenes generados con éxito!")
+                st.markdown("---")
+                st.markdown(res.text)
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 # ==========================================
-# PESTAÑA 2: CRONÓMETRO DE AULA
+# PESTAÑA 2: EXAMEN EN LÍNEA CON CRONÓMETRO
 # ==========================================
 with tab2:
-    st.header("⏱️ Cronómetro y Temporizador para Exámenes")
-    st.markdown("Controla el tiempo disponible para tus estudiantes durante la prueba en clase.")
+    st.header("⏱️ Examen en Línea con Tiempo Límite")
+    st.markdown("Controla el tiempo de evaluación en clase tipo formulario digital.")
 
-    tiempo_minutos = st.number_input("Configurar tiempo de examen (en minutos):", min_value=1, max_value=180, value=30)
+    tiempo_minutos = st.number_input("Minutos asignados para la prueba:", min_value=1, max_value=120, value=15)
     
-    if "timer_running" not in st.session_state:
-        st.session_state.timer_running = False
+    if "examen_activo" not in st.session_state:
+        st.session_state.examen_activo = False
 
-    col_t1, col_t2 = st.columns(2)
-    with col_t1:
-        if st.button("▶️ Iniciar Cronómetro"):
-            st.session_state.timer_running = True
-            st.session_state.target_time = time.time() + (tiempo_minutos * 60)
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        if st.button("🏁 Iniciar Cronómetro de Examen"):
+            st.session_state.examen_activo = True
+            st.session_state.tiempo_limite = time.time() + (tiempo_minutos * 60)
+            st.rerun()
+    with col_b2:
+        if st.button("🔄 Reiniciar"):
+            st.session_state.examen_activo = False
+            st.rerun()
 
-    with col_t2:
-        if st.button("⏹️ Reiniciar / Detener"):
-            st.session_state.timer_running = False
+    placeholder_t = st.empty()
 
-    timer_placeholder = st.empty()
-
-    if st.session_state.get("timer_running", False):
-        tiempo_restante = int(st.session_state.target_time - time.time())
-        if tiempo_restante > 0:
-            mins, secs = divmod(tiempo_restante, 60)
-            timer_placeholder.metric("Tiempo Restante", f"{mins:02d}:{secs:02d}")
+    if st.session_state.get("examen_activo", False):
+        restante = int(st.session_state.tiempo_limite - time.time())
+        if restante > 0:
+            m, s = divmod(restante, 60)
+            placeholder_t.markdown(f"### ⏳ Tiempo restante: **{m:02d}:{s:02d}**")
+            
+            with st.form("form_online"):
+                st.write("**Pregunta 1:** Responda de acuerdo al avance de la materia.")
+                st.text_input("Respuesta P1:", key="r1")
+                if st.form_submit_button("📤 Enviar Examen"):
+                    st.success("¡Enviado correctamente!")
+                    st.session_state.examen_activo = False
             time.sleep(1)
             st.rerun()
         else:
-            timer_placeholder.error("⏰ ¡El tiempo del examen ha terminado!")
-            st.session_state.timer_running = False
+            placeholder_t.error("⏰ ¡El tiempo ha concluido!")
+            st.session_state.examen_activo = False
     else:
-        timer_placeholder.metric("Tiempo Configurado", f"{tiempo_minutos:02d}:00")
+        placeholder_t.info(f"Cronómetro listo ({tiempo_minutos} minutos).")
 
 # ==========================================
-# PESTAÑA 3: EVALUADOR POR IMÁGENES
+# PESTAÑA 3: ESCÁNER Y CALIFICACIÓN RÁPIDA (CÁMARA DIRECTA)
 # ==========================================
 with tab3:
-    st.header("📷 Evaluación de Tareas y Trabajos por Imagen")
-    st.markdown("Sube una foto del examen físico o tarea del estudiante para recibir una revisión y sugerencia de calificación mediante IA.")
+    st.header("📷 Escáner Rápido de Tareas (Cámara en Directo)")
+    st.markdown("Usa la cámara de tu celular para escanear al instante la hoja del estudiante y obtener una revisión detallada con marcas verdes ($\checkmark$) y rojas ($\times$).")
 
-    uploaded_file = st.file_uploader("Sube la imagen del trabajo o examen (PNG, JPG, JPEG):", type=["png", "jpg", "jpeg"])
-    criterio_eval = st.text_area("Criterios de evaluación o rúbrica esperada (Ej: Coherencia, ortografía, resolución correcta de ejercicios...):")
+    # Usamos st.camera_input para evitar buscar en la galería y escanear directamente
+    foto_capturada = st.camera_input("📸 Toca para tomar la foto de la hoja del estudiante:")
+    
+    criterios_revision = st.text_area("Indica las respuestas correctas o pautas para la corrección:")
 
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Trabajo subido por el estudiante", use_container_width=True)
+    if foto_capturada and st.button("🔍 Escanear y Calificar al Instante"):
+        if not criterios_revision:
+            st.warning("Por favor, ingresa las pautas o respuestas correctas para comparar.")
+        else:
+            with st.spinner("Escaneando y evaluando con IA..."):
+                try:
+                    if api_key_input:
+                        genai.configure(api_key=api_key_input)
+                    elif "GEMINI_API_KEY" in st.secrets:
+                        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                    
+                    vision_model = genai.GenerativeModel('gemini-1.5-flash')
+                    prompt_escaneo = f"""
+                    Actúa como un profesor revisando una tarea o examen físico.
+                    Pautas correctas del maestro: {criterios_revision}
+                    
+                    Analiza la imagen escaneada y presenta la corrección ítem por ítem utilizando estrictamente:
+                    - ✅ (Check verde) para aciertos.
+                    - ❌ (Cruz roja) para errores.
+                    Proporciona retrovisión breve y una nota final sobre 100 puntos.
+                    """
 
-        if st.button("🔍 Analizar y Calificar Trabajo"):
-            if not criterio_eval:
-                st.warning("Por favor, ingresa los criterios de evaluación para que la IA pueda calificar con precisión.")
-            else:
-                with st.spinner("Analizando la imagen con Visión Artificial..."):
-                    try:
-                        if api_key_input:
-                            genai.configure(api_key=api_key_input)
-                        elif "GEMINI_API_KEY" in st.secrets:
-                            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                        
-                        vision_model = genai.GenerativeModel('gemini-1.5-flash')
-                        prompt_vision = f"""
-                        Actúa como un profesor exigente pero justo. Analiza esta imagen correspondiente a un trabajo escolar.
-                        Criterios de evaluación del profesor: {criterio_eval}
-                        
-                        Proporciona:
-                        1. Observaciones detalladas del contenido visualizado.
-                        2. Puntos fuertes y errores encontrados.
-                        3. Una nota sugerida (sobre 100 puntos).
-                        """
-
-                        response_vision = vision_model.generate_content([prompt_vision, image])
-                        
-                        st.success("¡Análisis completado!")
-                        st.markdown("---")
-                        st.markdown(response_vision.text)
-
-                    except Exception as e:
-                        st.error(f"Error al procesar la imagen: {e}")
+                    imagen_examen = Image.open(foto_capturada)
+                    res_vision = vision_model.generate_content([prompt_escaneo, imagen_examen])
+                    
+                    st.success("¡Escaneo y revisión completados!")
+                    st.markdown("---")
+                    st.markdown(res_vision.text)
+                except Exception as err:
+                    st.error(f"Error al procesar el escaneo: {err}")
