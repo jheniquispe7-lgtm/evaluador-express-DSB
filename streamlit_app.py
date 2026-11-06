@@ -78,12 +78,12 @@ with tab1:
                 elif "GEMINI_API_KEY" in st.secrets:
                     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                 
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('models/gemini-1.5-flash')
                 instrucciones = f"""
                 Actúa como profesor de {materia} para {nivel}. 
                 Genera exámenes formales con el contenido proporcionado. 
                 Cantidad: {cantidad} preguntas. Tipo: {tipo_pregunta}. 
-                Si el usuario pidió 'Versión A y Versión B', redacta ambas versiones con preguntas equivalentes pero ordenadas o redactadas de forma distinta para evitar copias. Incluye solucionario para el maestro al final.
+                Si el usuario pidió '{version_examen}', redacta las versiones indicadas con preguntas equivalentes pero ordenadas o redactadas de forma distinta para evitar copias. Incluye solucionario para el maestro al final.
                 """
 
                 if imagen_subida:
@@ -147,9 +147,8 @@ with tab2:
 # ==========================================
 with tab3:
     st.header("📷 Escáner Rápido de Tareas (Cámara en Directo)")
-    st.markdown("Usa la cámara de tu celular para escanear al instante la hoja del estudiante y obtener una revisión detallada con marcas verdes ($\checkmark$) y rojas ($\times$).")
+    st.markdown("Usa la cámara de tu celular para escanear al instante la hoja del estudiante y obtener una revisión detallada con marcas verdes (✓) y rojas (❌).")
 
-    # Usamos st.camera_input para evitar buscar en la galería y escanear directamente
     foto_capturada = st.camera_input("📸 Toca para tomar la foto de la hoja del estudiante:")
     
     criterios_revision = st.text_area("Indica las respuestas correctas o pautas para la corrección:")
@@ -165,7 +164,7 @@ with tab3:
                     elif "GEMINI_API_KEY" in st.secrets:
                         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
                     
-                    vision_model = genai.GenerativeModel('gemini-1.5-flash')
+                    vision_model = genai.GenerativeModel('models/gemini-1.5-flash')
                     prompt_escaneo = f"""
                     Actúa como un profesor revisando una tarea o examen físico.
                     Pautas correctas del maestro: {criterios_revision}
@@ -173,7 +172,7 @@ with tab3:
                     Analiza la imagen escaneada y presenta la corrección ítem por ítem utilizando estrictamente:
                     - ✅ (Check verde) para aciertos.
                     - ❌ (Cruz roja) para errores.
-                    Proporciona retrovisión breve y una nota final sobre 100 puntos.
+                    Proporciona retroalimentación breve y una nota final sobre 100 puntos.
                     """
 
                     imagen_examen = Image.open(foto_capturada)
