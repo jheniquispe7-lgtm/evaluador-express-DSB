@@ -5,7 +5,7 @@ import time
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Evaluador Express - DSB",
+    page_title="EVALUA - DSB",
     page_icon="⚡",
     layout="wide"
 )
@@ -20,7 +20,7 @@ except FileNotFoundError:
     st.warning("⚠️ Sube tu archivo 'banner.jpg' al repositorio de GitHub para mostrar el banner oficial.")
 
 # Título y descripción principal
-st.title("⚡ Evaluador Express - Unidad Educativa Daniel Sánchez Bustamante")
+st.title("⚡ EVALUA - DSB — Unidad Educativa Daniel Sánchez Bustamante")
 st.markdown("Herramienta docente integral: Exámenes multi-versión, cronómetro de aula y escaneo rápido por cámara.")
 
 # Pestañas principales
