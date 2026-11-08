@@ -90,7 +90,6 @@ with tab1:
     
     col_v1, col_v2 = st.columns(2)
     with col_v1:
-        # El maestro ahora puede anotar libremente su materia
         materia_sel = st.text_input("Anota la Materia:", value="Técnicas Tecnológicas")
     with col_v2:
         curso_sel = st.selectbox("Curso:", ["1ro Secundaria", "2do Secundaria", "3ro Secundaria", "4to Secundaria", "5to Secundaria", "6to Secundaria"])
@@ -253,5 +252,25 @@ with tab4:
                                 vision_ia = genai.GenerativeModel(m.name)
                                 break
 
-                    prompt_lector = f"""
-                    Actúa como un escáner óptico de corrección
+                    prompt_lector = (
+                        f"Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).\n"
+                        f"Patrón de respuestas correctas oficial para la {version_fila}: {patron_oficial}\n\n"
+                        "Analiza la imagen de la hoja de respuestas del alumno y:\n"
+                        "1. Identifica qué letra (A, B, C o D) marcó el estudiante en cada número.\n"
+                        "2. Compara cada respuesta del alumno con el patrón oficial y etiqueta rigurosamente:\n"
+                        "   - ✅ si es correcto (Acierto).\n"
+                        "   - ❌ si es incorrecto (Error, mostrando qué marcó vs la respuesta correcta).\n"
+                        "3. Presenta una tabla resumen final con:\n"
+                        "   - **Total de Aciertos (✓)**: \n"
+                        "   - **Total de Errores (✗)**: \n"
+                        "   - **Nota Final (sobre 100 puntos)**:"
+                    )
+
+                    img_hoja = Image.open(foto_alumno)
+                    res_escaneo = vision_ia.generate_content([prompt_lector, img_hoja])
+
+                    st.success("¡Escaneo y corrección completados con éxito!")
+                    st.markdown("---")
+                    st.markdown(res_escaneo.text)
+                except Exception as e:
+                    st.error(f"Error al procesar el escaneo: {e}")
