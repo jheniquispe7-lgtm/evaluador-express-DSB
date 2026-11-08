@@ -19,18 +19,16 @@ try:
 except Exception:
     pass
 
-def obtener_modelo_dinamico():
-    """Consulta de forma dinámica el primer modelo disponible compatible con la API."""
+def obtener_modelo_oficial():
+    """Instancia el modelo recomendado oficial por la API de Google."""
     try:
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                # Utiliza el nombre exacto devuelto por el servicio (ej. 'models/gemini-1.5-flash' o similar)
-                return genai.GenerativeModel(m.name)
+        return genai.GenerativeModel("gemini-3.8-flash")
     except Exception:
-        pass
-    
-    # Fallback por defecto si la lista no responde
-    return genai.GenerativeModel("gemini-1.5-flash")
+        # Fallback de respaldo por si acaso
+        try:
+            return genai.GenerativeModel("gemini-1.5-flash")
+        except Exception:
+            return genai.GenerativeModel("gemini-pro")
 
 # ==========================================
 # BANNER PRINCIPAL (TÍTULO DE LA HERRAMIENTA)
@@ -115,7 +113,7 @@ with tab1:
         else:
             with st.spinner(f"Creando {cant_versiones} patrones únicos y recombinando versiones..."):
                 try:
-                    model = obtener_modelo_dinamico()
+                    model = obtener_modelo_oficial()
 
                     prompt_versiones = f"""
                     Actúa como profesor experto de {materia_sel} ({curso_sel}).
@@ -252,7 +250,7 @@ with tab4:
         else:
             with st.spinner("Escaneando círculos rellenados y calculando aciertos..."):
                 try:
-                    vision_ia = obtener_modelo_dinamico()
+                    vision_ia = obtener_modelo_oficial()
 
                     prompt_lector = (
                         f"Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).\n"
