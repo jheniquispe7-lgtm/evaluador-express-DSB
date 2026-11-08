@@ -20,13 +20,14 @@ except Exception:
     pass
 
 def obtener_modelo_activo():
-    modelos_candidatos = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']
-    for m_name in modelos_candidatos:
+    # Buscamos de forma segura el modelo disponible en el entorno actual
+    for nombre_modelo in ['gemini-1.5-flash', 'gemini-1.0-pro', 'gemini-pro']:
         try:
-            m = genai.GenerativeModel(m_name)
+            m = genai.GenerativeModel(nombre_modelo)
             return m
         except Exception:
             continue
+    # Si ninguno funciona de forma directa, tomamos el primero disponible de la lista
     try:
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
@@ -110,7 +111,6 @@ with tab1:
     with col_v2:
         curso_sel = st.selectbox("Curso:", ["1ro Secundaria", "2do Secundaria", "3ro Secundaria", "4to Secundaria", "5to Secundaria", "6to Secundaria"])
     with col_v3:
-        # AQUÍ ELIGES EL NÚMERO DE VERSIÓNES / FILAS A GENERAR
         cant_versiones = st.slider("¿Cuántas versiones (filas) deseas crear?:", min_value=2, max_value=6, value=3)
 
     if st.button("🚀 Crear Versiones y Patrones Anti-Copias"):
@@ -126,11 +126,11 @@ with tab1:
                     Tengo el siguiente banco de preguntas con sus respuestas correctas oficiales:
                     {st.session_state.banco_docente}
 
-                    Genera exactamente {cant_versiones} versiones/filas distintas de examen (por ejemplo: Fila A, Fila B, Fila C... hasta completar {cant_versiones} filas).
+                    Genera exactamente {cant_versiones} versiones/filas distintas de examen (Fila A, Fila B, Fila C...).
                     Para cada versión:
                     1. Reordena las preguntas y permuta de forma inteligente las opciones A, B, C y D.
-                    2. Muestra las preguntas completas listas para imprimir o copiar de cada Fila.
-                    3. Al final, incluye las **Claves o Patrones de Respuestas Oficiales** detallados para cada una de las {cant_versiones} filas (ej: Fila A: 1-B, 2-A... / Fila B: 1-C, 2-D...) para que el maestro pueda calificar rápidamente.
+                    2. Muestra las preguntas listas para imprimir o copiar de cada Fila.
+                    3. Al final, incluye las **Claves o Patrones de Respuestas Oficiales** detallados para cada una de las {cant_versiones} filas.
                     """
                     
                     res_Versiones = model.generate_content(prompt_versiones)
