@@ -19,6 +19,22 @@ try:
 except Exception:
     pass
 
+def obtener_modelo_activo():
+    modelos_candidatos = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro']
+    for m_name in modelos_candidatos:
+        try:
+            m = genai.GenerativeModel(m_name)
+            return m
+        except Exception:
+            continue
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                return genai.GenerativeModel(m.name)
+    except Exception:
+        pass
+    return genai.GenerativeModel('gemini-1.5-flash')
+
 # ==========================================
 # BANNER PRINCIPAL (TÍTULO DE LA HERRAMIENTA)
 # ==========================================
@@ -88,59 +104,62 @@ with tab1:
     st.markdown("---")
     st.subheader("🔀 Generar Exámenes y Patrones Diferentes por Filas (A, B, C...)")
     
-    col_v1, col_v2 = st.columns(2)
+    col_v1, col_v2, col_v3 = st.columns(3)
     with col_v1:
         materia_sel = st.text_input("Anota la Materia:", value="Técnicas Tecnológicas")
     with col_v2:
         curso_sel = st.selectbox("Curso:", ["1ro Secundaria", "2do Secundaria", "3ro Secundaria", "4to Secundaria", "5to Secundaria", "6to Secundaria"])
+    with col_v3:
+        # AQUÍ ELIGES EL NÚMERO DE VERSIÓNES / FILAS A GENERAR
+        cant_versiones = st.slider("¿Cuántas versiones (filas) deseas crear?:", min_value=2, max_value=6, value=3)
 
     if st.button("🚀 Crear Versiones y Patrones Anti-Copias"):
         if not st.session_state.banco_docente:
             st.warning("Primero debes registrar al menos una pregunta en el banco.")
         else:
-            with st.spinner("Creando patrones únicos y recombinando versiones (A, B, C)..."):
+            with st.spinner(f"Creando {cant_versiones} patrones únicos y recombinando versiones..."):
                 try:
-                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    model = obtener_modelo_activo()
 
                     prompt_versiones = f"""
                     Actúa como profesor experto de {materia_sel} ({curso_sel}).
                     Tengo el siguiente banco de preguntas con sus respuestas correctas oficiales:
                     {st.session_state.banco_docente}
 
-                    Genera lo siguiente:
-                    1. **Fila A**: Examen con el orden original.
-                    2. **Fila B**: Versión alterna donde se reordenan las preguntas y se permutan los incisos A, B, C, D de forma inteligente.
-                    3. **Fila C**: Otra versión con un patrón diagonal alternativo (inspirado en patrones de hojas ópticas de 4 opciones A-D).
-                    4. Las **Claves o Patrones de Respuestas Oficiales** detallados para cada fila (Fila A, Fila B, Fila C) para que el maestro pueda calificar rápidamente.
+                    Genera exactamente {cant_versiones} versiones/filas distintas de examen (por ejemplo: Fila A, Fila B, Fila C... hasta completar {cant_versiones} filas).
+                    Para cada versión:
+                    1. Reordena las preguntas y permuta de forma inteligente las opciones A, B, C y D.
+                    2. Muestra las preguntas completas listas para imprimir o copiar de cada Fila.
+                    3. Al final, incluye las **Claves o Patrones de Respuestas Oficiales** detallados para cada una de las {cant_versiones} filas (ej: Fila A: 1-B, 2-A... / Fila B: 1-C, 2-D...) para que el maestro pueda calificar rápidamente.
                     """
                     
                     res_Versiones = model.generate_content(prompt_versiones)
-                    st.success("¡Exámenes multi-versión y patrones generados con éxito!")
+                    st.success(f"¡Se generaron las {cant_versiones} versiones y sus patrones con éxito!")
                     st.markdown("---")
                     st.markdown(res_Versiones.text)
                 except Exception as err:
                     st.error(f"Error al generar las versiones: {err}")
 
 # ==========================================
-# PESTAÑA 2: GENERADOR DE HOJA DE RESPUESTAS
+# PESTAÑA 2: GENERADOR DE HOJA DE RESPUESTAS (CÍRCULOS)
 # ==========================================
 with tab2:
-    st.header("📄 Generador de Plantilla de Hoja de Respuestas (A-D)")
-    st.markdown("Visualiza y genera el formato de hoja de respuestas de 4 opciones listo para imprimir.")
+    st.header("📄 Generador de Plantilla de Hoja de Respuestas (Círculos)")
+    st.markdown("Visualiza el formato para impresión. Los estudiantes deben **pintar completamente el círculo** de su respuesta.")
 
     num_p_hoja = st.slider("Número de preguntas para la plantilla:", min_value=5, max_value=30, value=20)
     
     if st.button("🖨️ Mostrar Vista Previa de Hoja de Respuestas"):
-        st.info("Plantilla generada basada en el formato estándar con opciones A, B, C y D:")
+        st.info("📌 **Instrucción para el estudiante:** Rellene/pinte completamente el círculo correspondiente con bolígrafo negro o azul.")
         
         st.markdown("### 📋 HOJA DE RESPUESTAS — EVALUA DSB")
-        st.markdown("**Nombre:** __________________________ | **Curso:** ____________ | **Fila:** ____")
+        st.markdown("**Nombre:** __________________________ | **Curso:** ____________ | **Fila:** [ A ] [ B ] [ C ] [ D ]")
         st.markdown("---")
         
         for p in range(1, num_p_hoja + 1):
-            st.markdown(f"**{p:2d}**     ` A `     ` B `     ` C `     ` D `")
+            st.markdown(f"**P{p:02d}**      ⚪ **A**      ⚪ **B**      ⚪ **C**      ⚪ **D**")
         st.markdown("---")
-        st.success("¡Listo para imprimir o distribuir digitalmente!")
+        st.success("¡Listo para imprimir y distribuir!")
 
 # ==========================================
 # PESTAÑA 3: EXAMEN EN LÍNEA CON AUTOCALIFICACIÓN INSTANTÁNEA
@@ -235,18 +254,18 @@ with tab4:
         if not patron_oficial:
             st.warning("Por favor, ingresa el patrón de respuestas correctas antes de escanear.")
         else:
-            with st.spinner("Escaneando óvalos y calculando aciertos..."):
+            with st.spinner("Escaneando círculos rellenados y calculando aciertos..."):
                 try:
-                    vision_ia = genai.GenerativeModel('gemini-2.5-flash')
+                    vision_ia = obtener_modelo_activo()
 
                     prompt_lector = (
                         f"Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).\n"
                         f"Patrón de respuestas correctas oficial para la {version_fila}: {patron_oficial}\n\n"
-                        "Analiza la imagen de la hoja de respuestas del alumno y:\n"
-                        "1. Identifica qué letra (A, B, C o D) marcó el estudiante en cada número.\n"
+                        "Analiza la imagen de la hoja de respuestas del alumno (donde pintó los círculos) y:\n"
+                        "1. Identifica qué círculo (A, B, C o D) fue pintado/oscurecido completamente por el estudiante en cada número.\n"
                         "2. Compara cada respuesta del alumno con el patrón oficial y etiqueta rigurosamente:\n"
                         "   - ✅ si es correcto (Acierto).\n"
-                        "   - ❌ si es incorrecto (Error, mostrando qué marcó vs la respuesta correcta).\n"
+                        "   - ❌ si es incorrecto (Error, mostrando qué marco vs la respuesta correcta).\n"
                         "3. Presenta una tabla resumen final con:\n"
                         "   - **Total de Aciertos (✓)**: \n"
                         "   - **Total de Errores (✗)**: \n"
