@@ -100,14 +100,7 @@ with tab1:
         else:
             with st.spinner("Creando patrones únicos y recombinando versiones (A, B, C)..."):
                 try:
-                    try:
-                        model = genai.GenerativeModel('gemini-1.5-flash')
-                        test_try = model.generate_content("Test")
-                    except Exception:
-                        for m in genai.list_models():
-                            if 'generateContent' in m.supported_generation_methods:
-                                model = genai.GenerativeModel(m.name)
-                                break
+                    model = genai.GenerativeModel('gemini-2.5-flash')
 
                     prompt_versiones = f"""
                     Actúa como profesor experto de {materia_sel} ({curso_sel}).
@@ -244,13 +237,7 @@ with tab4:
         else:
             with st.spinner("Escaneando óvalos y calculando aciertos..."):
                 try:
-                    try:
-                        vision_ia = genai.GenerativeModel('gemini-1.5-flash')
-                    except Exception:
-                        for m in genai.list_models():
-                            if 'generateContent' in m.supported_generation_methods:
-                                vision_ia = genai.GenerativeModel(m.name)
-                                break
+                    vision_ia = genai.GenerativeModel('gemini-2.5-flash')
 
                     prompt_lector = (
                         f"Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).\n"
