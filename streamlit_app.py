@@ -20,7 +20,8 @@ except Exception:
     pass
 
 def obtener_modelo():
-    return genai.GenerativeModel('gemini-1.5-flash')
+    # Usamos gemini-1.0-pro para garantizar compatibilidad total e inmediata
+    return genai.GenerativeModel('gemini-1.0-pro')
 
 # ==========================================
 # BANNER PRINCIPAL (TÍTULO DE LA HERRAMIENTA)
