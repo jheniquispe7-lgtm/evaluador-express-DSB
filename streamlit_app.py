@@ -11,6 +11,26 @@ st.set_page_config(
 )
 
 # ==========================================
+# CONFIGURACIÓN AUTOMÁTICA DE LA API KEY (SIN PEDIRLA)
+# ==========================================
+# Coloca tu API key directamente aquí para que nunca la pida en pantalla:
+API_KEY_FIJA = "TU_API_KEY_AQUI"
+
+try:
+    if API_KEY_FIJA and API_KEY_FIJA != "TU_API_KEY_AQUI":
+        genai.configure(api_key=API_KEY_FIJA)
+    elif "GEMINI_API_KEY" in st.secrets:
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    else:
+        # Intenta usar la llave por defecto si estuviera configurada en el entorno
+        pass
+except Exception:
+    pass
+
+def obtener_modelo():
+    return genai.GenerativeModel('models/gemini-1.5-flash')
+
+# ==========================================
 # BANNER PRINCIPAL (TÍTULO DE LA HERRAMIENTA)
 # ==========================================
 try:
@@ -29,18 +49,6 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "⏱️ Examen en Línea", 
     "📷 Escáner de Aciertos (✓/✗)"
 ])
-
-api_key_input = st.sidebar.text_input("API Key de Gemini:", type="password")
-
-def configurar_ia():
-    if api_key_input:
-        genai.configure(api_key=api_key_input)
-    elif "GEMINI_API_KEY" in st.secrets:
-        genai.configure(st.secrets["GEMINI_API_KEY"])
-    else:
-        st.error("Por favor ingresa tu API Key de Gemini.")
-        st.stop()
-    return genai.GenerativeModel('models/gemini-1.5-flash')
 
 # ==========================================
 # PESTAÑA 1: BANCO DE PREGUNTAS Y PATRONES (A-D)
@@ -103,7 +111,7 @@ with tab1:
         else:
             with st.spinner("Creando patrones únicos y recombinando versiones (A, B, C)..."):
                 try:
-                    model = configurar_ia()
+                    model = obtener_modelo()
                     prompt_versiones = f"""
                     Actúa como profesor experto de {materia_sel} ({curso_sel}).
                     Tengo el siguiente banco de preguntas con sus respuestas correctas oficiales:
@@ -198,7 +206,7 @@ with tab4:
         else:
             with st.spinner("Escaneando óvalos y calculando aciertos..."):
                 try:
-                    vision_ia = configurar_ia()
+                    vision_ia = obtener_modelo()
                     prompt_lector = f"""
                     Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).
                     Patrón de respuestas correctas oficial para la {version_fila}: {patron_oficial}
