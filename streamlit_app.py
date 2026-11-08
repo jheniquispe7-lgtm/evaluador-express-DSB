@@ -19,32 +19,30 @@ try:
 except Exception:
     pass
 
-def obtener_modelo_funcional():
-    """Prueba en secuencia los modelos estándar activos para garantizar conexión sin error 404."""
-    modelos_a_probar = [
-        'gemini-1.5-flash',
-        'gemini-1.5-pro',
-        'gemini-1.0-pro',
-        'gemini-pro'
-    ]
-    
-    for nombre in modelos_a_probar:
-        try:
-            m = genai.GenerativeModel(nombre)
-            # Prueba ligera de verificación
-            return m
-        except Exception:
-            continue
-
-    # Si ninguno de la lista responde, obtiene dinámicamente el primero disponible
+def obtener_modelo_seguro():
+    """Prueba directamente nombres de modelos sin prefijos beta o utiliza fallback."""
+    # En la API actual de Google, se instancia indicando el modelo directamente
     try:
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                return genai.GenerativeModel(m.name)
+        return genai.GenerativeModel("gemini-1.5-flash")
+    except Exception:
+        pass
+    
+    try:
+        return genai.GenerativeModel("gemini-1.5-pro")
     except Exception:
         pass
 
-    return genai.GenerativeModel('gemini-1.5-flash')
+    # Si todo falla, lista los modelos activos en tu cuenta y usa el primero funcional
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                # Extrae solo el nombre corto si viene como 'models/gemini-xxx'
+                nombre_clean = m.name.replace("models/", "")
+                return genai.GenerativeModel(nombre_clean)
+    except Exception:
+        pass
+
+    return genai.GenerativeModel("gemini-1.5-flash")
 
 # ==========================================
 # BANNER PRINCIPAL (TÍTULO DE LA HERRAMIENTA)
@@ -129,7 +127,7 @@ with tab1:
         else:
             with st.spinner(f"Creando {cant_versiones} patrones únicos y recombinando versiones..."):
                 try:
-                    model = obtener_modelo_funcional()
+                    model = obtener_modelo_seguro()
 
                     prompt_versiones = f"""
                     Actúa como profesor experto de {materia_sel} ({curso_sel}).
@@ -266,7 +264,7 @@ with tab4:
         else:
             with st.spinner("Escaneando círculos rellenados y calculando aciertos..."):
                 try:
-                    vision_ia = obtener_modelo_funcional()
+                    vision_ia = obtener_modelo_seguro()
 
                     prompt_lector = (
                         f"Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).\n"
