@@ -82,7 +82,7 @@ with tab1:
         st.subheader("📚 Preguntas Registradas")
         for idx, item in enumerate(st.session_state.banco_docente, 1):
             st.markdown(f"**P{idx}. {item['pregunta']}**")
-            st.markdown(f"A) {item['A']} | B) {item['B']} | C) {item['C']} | D) {item['D']} — *Correcta: **[{item['correct'] if 'correct' in item else item['correcta']}]***")
+            st.markdown(f"A) {item['A']} | B) {item['B']} | C) {item['C']} | D) {item['D']} — *Correcta: **[{item['correcta']}]***")
         
         if st.button("🗑️ Vaciar Banco de Preguntas"):
             st.session_state.banco_docente = []
@@ -126,7 +126,7 @@ with tab1:
 # ==========================================
 # PESTAÑA 2: GENERADOR DE HOJA DE RESPUESTAS
 # ==========================================
-with tab1_b := tab2:
+with tab2:
     st.header("📄 Generador de Plantilla de Hoja de Respuestas (A-D)")
     st.markdown("Visualiza y genera el formato de hoja de respuestas de 4 opciones listo para imprimir y repartir a tus estudiantes.")
 
@@ -135,7 +135,6 @@ with tab1_b := tab2:
     if st.button("🖨️ Mostrar Vista Previa de Hoja de Respuestas"):
         st.info("Plantilla generada basada en el formato estándar con opciones A, B, C y D:")
         
-        # Simulando la estructura visual de la hoja de respuestas
         st.markdown("### 📋 HOJA DE RESPUESTAS — EVALUA DSB")
         st.markdown("**Nombre:** __________________________ | **Curso:** ____________ | **Fila:** ____")
         st.markdown("---")
