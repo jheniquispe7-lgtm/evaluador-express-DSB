@@ -19,29 +19,17 @@ try:
 except Exception:
     pass
 
-def obtener_modelo_seguro():
-    """Prueba directamente nombres de modelos sin prefijos beta o utiliza fallback."""
-    # En la API actual de Google, se instancia indicando el modelo directamente
-    try:
-        return genai.GenerativeModel("gemini-1.5-flash")
-    except Exception:
-        pass
-    
-    try:
-        return genai.GenerativeModel("gemini-1.5-pro")
-    except Exception:
-        pass
-
-    # Si todo falla, lista los modelos activos en tu cuenta y usa el primero funcional
+def obtener_modelo_dinamico():
+    """Consulta de forma dinámica el primer modelo disponible compatible con la API."""
     try:
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
-                # Extrae solo el nombre corto si viene como 'models/gemini-xxx'
-                nombre_clean = m.name.replace("models/", "")
-                return genai.GenerativeModel(nombre_clean)
+                # Utiliza el nombre exacto devuelto por el servicio (ej. 'models/gemini-1.5-flash' o similar)
+                return genai.GenerativeModel(m.name)
     except Exception:
         pass
-
+    
+    # Fallback por defecto si la lista no responde
     return genai.GenerativeModel("gemini-1.5-flash")
 
 # ==========================================
@@ -127,7 +115,7 @@ with tab1:
         else:
             with st.spinner(f"Creando {cant_versiones} patrones únicos y recombinando versiones..."):
                 try:
-                    model = obtener_modelo_seguro()
+                    model = obtener_modelo_dinamico()
 
                     prompt_versiones = f"""
                     Actúa como profesor experto de {materia_sel} ({curso_sel}).
@@ -250,8 +238,8 @@ with tab3:
 # PESTAÑA 4: ESCÁNER DE ACIERTOS (✓ / ✗)
 # ==========================================
 with tab4:
-    st.header("📷 Escáner Óptico de Hoja de Respuestas (A-D)")
-    st.markdown("Toma una foto a la hoja marcada por el estudiante. La IA leerá las marcas entre **A, B, C y D** y calculará la nota.")
+    st.header("📷 Escáner Óptico de Hoja de Respuestas (Círculos)")
+    st.markdown("Toma una foto a la hoja marcada por el estudiante. La IA leerá los círculos rellenados entre **A, B, C y D** y calculará la nota.")
 
     version_fila = st.radio("Selecciona la Fila evaluada:", ["Fila A", "Fila B", "Fila C", "Fila D"], horizontal=True)
     patron_oficial = st.text_input("Ingresa el patrón de respuestas correctas (ej: 1-A, 2-C, 3-B, 4-D...):")
@@ -264,7 +252,7 @@ with tab4:
         else:
             with st.spinner("Escaneando círculos rellenados y calculando aciertos..."):
                 try:
-                    vision_ia = obtener_modelo_seguro()
+                    vision_ia = obtener_modelo_dinamico()
 
                     prompt_lector = (
                         f"Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).\n"
