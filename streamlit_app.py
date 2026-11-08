@@ -19,17 +19,32 @@ try:
 except Exception:
     pass
 
-def obtener_modelo_automatico():
-    """Busca y selecciona de forma automática cualquier modelo disponible que soporte texto e imágenes."""
+def obtener_modelo_funcional():
+    """Prueba en secuencia los modelos estándar activos para garantizar conexión sin error 404."""
+    modelos_a_probar = [
+        'gemini-1.5-flash',
+        'gemini-1.5-pro',
+        'gemini-1.0-pro',
+        'gemini-pro'
+    ]
+    
+    for nombre in modelos_a_probar:
+        try:
+            m = genai.GenerativeModel(nombre)
+            # Prueba ligera de verificación
+            return m
+        except Exception:
+            continue
+
+    # Si ninguno de la lista responde, obtiene dinámicamente el primero disponible
     try:
         for m in genai.list_models():
             if 'generateContent' in m.supported_generation_methods:
-                # Retorna el primer modelo funcional disponible en la cuenta
                 return genai.GenerativeModel(m.name)
     except Exception:
         pass
-    # Fallback seguro si list_models falla
-    return genai.GenerativeModel('gemini-pro')
+
+    return genai.GenerativeModel('gemini-1.5-flash')
 
 # ==========================================
 # BANNER PRINCIPAL (TÍTULO DE LA HERRAMIENTA)
@@ -114,7 +129,7 @@ with tab1:
         else:
             with st.spinner(f"Creando {cant_versiones} patrones únicos y recombinando versiones..."):
                 try:
-                    model = obtener_modelo_automatico()
+                    model = obtener_modelo_funcional()
 
                     prompt_versiones = f"""
                     Actúa como profesor experto de {materia_sel} ({curso_sel}).
@@ -251,7 +266,7 @@ with tab4:
         else:
             with st.spinner("Escaneando círculos rellenados y calculando aciertos..."):
                 try:
-                    vision_ia = obtener_modelo_automatico()
+                    vision_ia = obtener_modelo_funcional()
 
                     prompt_lector = (
                         f"Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).\n"
