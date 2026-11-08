@@ -19,10 +19,6 @@ try:
 except Exception:
     pass
 
-def obtener_modelo():
-    # Usamos gemini-1.0-pro para garantizar compatibilidad total e inmediata
-    return genai.GenerativeModel('gemini-1.0-pro')
-
 # ==========================================
 # BANNER PRINCIPAL (TÍTULO DE LA HERRAMIENTA)
 # ==========================================
@@ -94,7 +90,8 @@ with tab1:
     
     col_v1, col_v2 = st.columns(2)
     with col_v1:
-        materia_sel = st.selectbox("Materia:", ["TTG", "TTE", "Educación Musical", "Artes Plásticas", "Valores Espirituales y Religiones", "Educación Física"])
+        # El maestro ahora puede anotar libremente su materia
+        materia_sel = st.text_input("Anota la Materia:", value="Técnicas Tecnológicas")
     with col_v2:
         curso_sel = st.selectbox("Curso:", ["1ro Secundaria", "2do Secundaria", "3ro Secundaria", "4to Secundaria", "5to Secundaria", "6to Secundaria"])
 
@@ -104,7 +101,15 @@ with tab1:
         else:
             with st.spinner("Creando patrones únicos y recombinando versiones (A, B, C)..."):
                 try:
-                    model = obtener_modelo()
+                    try:
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        test_try = model.generate_content("Test")
+                    except Exception:
+                        for m in genai.list_models():
+                            if 'generateContent' in m.supported_generation_methods:
+                                model = genai.GenerativeModel(m.name)
+                                break
+
                     prompt_versiones = f"""
                     Actúa como profesor experto de {materia_sel} ({curso_sel}).
                     Tengo el siguiente banco de preguntas con sus respuestas correctas oficiales:
@@ -240,27 +245,13 @@ with tab4:
         else:
             with st.spinner("Escaneando óvalos y calculando aciertos..."):
                 try:
-                    vision_ia = obtener_modelo()
+                    try:
+                        vision_ia = genai.GenerativeModel('gemini-1.5-flash')
+                    except Exception:
+                        for m in genai.list_models():
+                            if 'generateContent' in m.supported_generation_methods:
+                                vision_ia = genai.GenerativeModel(m.name)
+                                break
+
                     prompt_lector = f"""
-                    Actúa como un escáner óptico de corrección de exámenes de 4 opciones (A, B, C, D).
-                    Patrón de respuestas correctas oficial para la {version_fila}: {patron_oficial}
-                    
-                    Analiza la imagen de la hoja de respuestas del alumno y:
-                    1. Identifica qué letra (A, B, C o D) marcó el estudiante en cada número.
-                    2. Compara cada respuesta del alumno con el patrón oficial y etiqueta rigurosamente:
-                       - ✅ si es correcto (Acierto).
-                       - ❌ si es incorrecto (Error, mostrando qué marcó vs la respuesta correcta).
-                    3. Presenta una tabla resumen final con:
-                       - **Total de Aciertos (✓)**: 
-                       - **Total de Errores (✗)**: 
-                       - **Nota Final (sobre 100 puntos)**:
-                    """
-
-                    img_hoja = Image.open(foto_alumno)
-                    res_escaneo = vision_ia.generate_content([prompt_lector, img_hoja])
-
-                    st.success("¡Escaneo y corrección completados con éxito!")
-                    st.markdown("---")
-                    st.markdown(res_escaneo.text)
-                except Exception as e:
-                    st.error(f"Error al procesar el escaneo: {e}")
+                    Actúa como un escáner óptico de corrección
