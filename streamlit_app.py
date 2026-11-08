@@ -11,19 +11,11 @@ st.set_page_config(
 )
 
 # ==========================================
-# CONFIGURACIÓN AUTOMÁTICA DE LA API KEY (SIN PEDIRLA)
+# CONFIGURACIÓN SEGURA DE LA API KEY
 # ==========================================
-# Coloca tu API key directamente aquí para que nunca la pida en pantalla:
-API_KEY_FIJA = "TU_API_KEY_AQUI"
-
 try:
-    if API_KEY_FIJA and API_KEY_FIJA != "TU_API_KEY_AQUI":
-        genai.configure(api_key=API_KEY_FIJA)
-    elif "GEMINI_API_KEY" in st.secrets:
+    if "GEMINI_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    else:
-        # Intenta usar la llave por defecto si estuviera configurada en el entorno
-        pass
 except Exception:
     pass
 
@@ -40,13 +32,13 @@ except FileNotFoundError:
     st.title("⚡ EVALUA - DSB")
     st.warning("⚠️ Sube tu archivo 'banner.jpg' al repositorio de GitHub para mostrar el banner oficial.")
 
-st.markdown("**Plataforma de Evaluación Docente — Unidad Educativa Daniel Sánchez Bustamante:** Creación de banco de preguntas, patrones anti-copias por versiones (A, B, C) de 4 opciones (A-D) y escaneo rápido.")
+st.markdown("**Plataforma de Evaluación Docente — Unidad Educativa Daniel Sánchez Bustamante:** Banco de preguntas, patrones anti-copias (A-D), examen digital con calificación instantánea y escaneo rápido.")
 
 # Pestañas principales de la aplicación
 tab1, tab2, tab3, tab4 = st.tabs([
     "📝 Banco de Preguntas y Patrones", 
     "📄 Generar Hoja de Respuestas", 
-    "⏱️ Examen en Línea", 
+    "⏱️ Examen en Línea (Instantáneo)", 
     "📷 Escáner de Aciertos (✓/✗)"
 ])
 
@@ -55,7 +47,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 # ==========================================
 with tab1:
     st.header("📝 Banco de Preguntas y Generación de Patrones por Versiones")
-    st.markdown("Dicta o escribe tus preguntas con sus 4 opciones (**A, B, C, D**) y define cuál es la respuesta correcta. La IA generará los patrones de respuestas diferentes para cada versión (Fila A, B, C...) evitando copias.")
+    st.markdown("Dicta o escribe tus preguntas con sus 4 opciones (**A, B, C, D**) y define cuál es la respuesta correcta.")
 
     st.info("💡 **Consejo:** Usa el micrófono del teclado de tu celular para dictar las preguntas con rapidez.")
 
@@ -121,7 +113,7 @@ with tab1:
                     1. **Fila A**: Examen con el orden original.
                     2. **Fila B**: Versión alterna donde se reordenan las preguntas y se permutan los incisos A, B, C, D de forma inteligente.
                     3. **Fila C**: Otra versión con un patrón diagonal alternativo (inspirado en patrones de hojas ópticas de 4 opciones A-D).
-                    4. Las **Claves o Patrones de Respuestas Oficiales** detallados para cada fila (Fila A, Fila B, Fila C) para que el maestro pueda calificar rápidamente con su cámara.
+                    4. Las **Claves o Patrones de Respuestas Oficiales** detallados para cada fila (Fila A, Fila B, Fila C) para que el maestro pueda calificar rápidamente.
                     """
                     
                     res_Versiones = model.generate_content(prompt_versiones)
@@ -136,7 +128,7 @@ with tab1:
 # ==========================================
 with tab2:
     st.header("📄 Generador de Plantilla de Hoja de Respuestas (A-D)")
-    st.markdown("Visualiza y genera el formato de hoja de respuestas de 4 opciones listo para imprimir y repartir a tus estudiantes.")
+    st.markdown("Visualiza y genera el formato de hoja de respuestas de 4 opciones listo para imprimir.")
 
     num_p_hoja = st.slider("Número de preguntas para la plantilla:", min_value=5, max_value=30, value=20)
     
@@ -153,10 +145,12 @@ with tab2:
         st.success("¡Listo para imprimir o distribuir digitalmente!")
 
 # ==========================================
-# PESTAÑA 3: EXAMEN EN LÍNEA
+# PESTAÑA 3: EXAMEN EN LÍNEA CON AUTOCALIFICACIÓN INSTANTÁNEA
 # ==========================================
 with tab3:
-    st.header("⏱️ Examen en Línea con Cronómetro (A-D)")
+    st.header("⏱️ Examen en Línea con Calificación Instantánea")
+    st.markdown("Los estudiantes rinden su examen en tiempo real y obtienen su nota e informe de aciertos al momento de enviar.")
+
     minutos_Ex = st.number_input("Tiempo límite (minutos):", min_value=1, max_value=120, value=15)
     
     if "online_activo" not in st.session_state:
@@ -173,27 +167,66 @@ with tab3:
         if restante_t > 0:
             mm, ss = divmod(restante_t, 60)
             cron_caja.markdown(f"### ⏳ Tiempo restante: **{mm:02d}:{ss:02d}**")
+            
             with st.form("form_online_estudiante"):
-                st.write("**Evaluación en curso:**")
-                st.text_input("Nombre del Estudiante:")
-                st.radio("Pregunta 1:", ["A", "B", "C", "D"])
-                if st.form_submit_button("📤 Enviar Examen"):
-                    st.success("¡Respuestas enviadas con éxito!")
-                    st.session_state.online_activo = False
+                nombre_est = st.text_input("Nombre Completo del Estudiante:")
+                respuestas_est = {}
+                
+                preguntas_evaluar = st.session_state.banco_docente if st.session_state.banco_docente else [
+                    {"pregunta": "¿Cuál es la respuesta correcta para la P1?", "A": "Opción 1", "B": "Opción 2", "C": "Opción 3", "D": "Opción 4", "correcta": "A"},
+                    {"pregunta": "¿Cuál es la respuesta correcta para la P2?", "A": "Opción A", "B": "Opción B", "C": "Opción C", "D": "Opción D", "correcta": "C"}
+                ]
+
+                for idx, q in enumerate(preguntas_evaluar, 1):
+                    st.write(f"**P{idx}. {q['pregunta']}**")
+                    respuestas_est[idx] = st.radio(
+                        f"Selecciona la opción para la P{idx}:",
+                        ["A", "B", "C", "D"],
+                        format_func=lambda opt, item=q: f"{opt}) {item[opt]}",
+                        key=f"q_{idx}"
+                    )
+                    st.markdown("---")
+
+                enviado = st.form_submit_button("📤 Enviar Examen y Ver Nota")
+
+                if enviado:
+                    if not nombre_est:
+                        st.warning("Por favor escribe tu nombre completo antes de enviar.")
+                    else:
+                        aciertos = 0
+                        total_q = len(preguntas_evaluar)
+                        
+                        st.markdown(f"### 📊 Resultado para: **{nombre_est}**")
+                        
+                        for idx, q in enumerate(preguntas_evaluar, 1):
+                            resp_al = respuestas_est[idx]
+                            resp_cor = q.get('correcta', q.get('correct', 'A'))
+                            
+                            if resp_al == resp_cor:
+                                aciertos += 1
+                                st.success(f"**P{idx}:** ✅ Correcto (Marcaste **{resp_al}**)")
+                            else:
+                                st.error(f"**P{idx}:** ❌ Incorrecto (Marcaste **{resp_al}** | Correcta: **{resp_cor}**)")
+
+                        nota_final = round((aciertos / total_q) * 100, 1)
+                        st.markdown("---")
+                        st.metric(label="Calificación Final", value=f"{nota_final} / 100 pts", delta=f"{aciertos} de {total_q} aciertos")
+                        st.session_state.online_activo = False
+            
             time.sleep(1)
             st.rerun()
         else:
-            cron_caja.error("⏰ ¡El tiempo ha concluido!")
+            cron_caja.error("⏰ ¡El tiempo del examen ha concluido!")
             st.session_state.online_activo = False
     else:
-        cron_caja.info(f"Cronómetro configurado a {minutos_Ex} minutos.")
+        cron_caja.info(f"Cronómetro configurado a {minutos_Ex} minutos. Presiona 'Iniciar Prueba en Línea' para comenzar.")
 
 # ==========================================
 # PESTAÑA 4: ESCÁNER DE ACIERTOS (✓ / ✗)
 # ==========================================
 with tab4:
     st.header("📷 Escáner Óptico de Hoja de Respuestas (A-D)")
-    st.markdown("Toma una foto a la hoja marcada por el estudiante. La IA leerá las marcas en las opciones **A, B, C y D**, las contrastará con el patrón de la versión (Fila A, B, C...) y calculará los aciertos automáticamente con marcas verdes ($\checkmark$) y rojas ($\times$).")
+    st.markdown("Toma una foto a la hoja marcada por el estudiante. La IA leerá las marcas entre **A, B, C y D** y calculará la nota.")
 
     version_fila = st.radio("Selecciona la Fila evaluada:", ["Fila A", "Fila B", "Fila C", "Fila D"], horizontal=True)
     patron_oficial = st.text_input("Ingresa el patrón de respuestas correctas (ej: 1-A, 2-C, 3-B, 4-D...):")
