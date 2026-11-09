@@ -64,7 +64,7 @@ try:
     banner_img = Image.open("banner-1.jpg")
     st.image(banner_img, use_container_width=True)
 except FileNotFoundError:
-    st.title("EVALUA - DSB")
+    st.title("⚡ EVALUA - DSB")
     st.caption("Sistema Integrado de Evaluación Digital e Impresa")
 
 st.markdown("**Plataforma de Evaluación Docente — U.E. Daniel Sánchez Bustamante**")
