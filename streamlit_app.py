@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import random
+from PIL import Image
 from google import genai
 
 # Configuración inicial de la página
@@ -48,7 +49,7 @@ if rol == "Docente":
             [
                 "1. Generador de Preguntas con IA (Gemini)",
                 "2. Generador de Versiones Impresas (Anti-copias)",
-                "3. Escáner Óptico y Calificación Automática"
+                "3. Escáner Óptico y Calificación con IA Real"
             ]
         )
         
@@ -106,13 +107,13 @@ if rol == "Docente":
                 else:
                     st.warning("Ingrese al menos 2 preguntas para mezclar.")
 
-        # --- 3. ESCÁNER ÓPTICO Y CALIFICACIÓN AUTOMÁTICA ---
-        elif opcion == "3. Escáner Óptico y Calificación Automática":
-            st.subheader("📷 Escáner Óptico de Hojas Físicas")
+        # --- 3. ESCÁNER ÓPTICO CON VISIÓN REAL DE GEMINI ---
+        elif opcion == "3. Escáner Óptico y Calificación con IA Real":
+            st.subheader("📷 Escáner Inteligente con Visión Artificial")
             
-            st.write("Ingrese las respuestas correctas oficiales (su banco de claves):")
+            st.write("Ingrese las respuestas correctas oficiales (su clave de respuestas):")
             banco_maestro = st.text_area(
-                "Clave de respuestas (Ej: 1:B, 2:A, 3:D, 4:B, 5:C, 6:C, 7:C, 8:C, 9:B, 10:C):",
+                "Clave de respuestas esperada (Ej: 1:B, 2:A, 3:D, 4:B, 5:C...):",
                 value="1:B, 2:A, 3:D, 4:B, 5:C, 6:C, 7:C, 8:C, 9:B, 10:C",
                 height=80
             )
@@ -123,21 +124,34 @@ if rol == "Docente":
             if archivo_img and nombre_est:
                 st.image(archivo_img, caption="Hoja cargada del estudiante", width=300)
                 
-                if st.button("Analizar y Calificar Examen"):
-                    with st.spinner("Procesando matriz óptica y evaluando respuestas..."):
-                        # Simulación de alta precisión basada en la plantilla del examen perfecto
-                        aciertos = 10
-                        total = 10
-                        nota_final = 100
-                        
-                        st.success("¡Examen escaneado y revisado con éxito!")
-                        st.markdown("### 📊 Resultado de la Revisión Óptica")
-                        st.metric(label="Calificación Final", value=f"{nota_final} / 100 pts")
-                        
-                        st.markdown("#### Detalle por Pregunta:")
-                        claves_correctas = ["B", "A", "D", "B", "C", "C", "C", "C", "B", "C"]
-                        for i in range(1, 11):
-                            st.write(f"Pregunta {i}: Marcada [ **{claves_correctas[i-1]}** ] — **✅ Correcto**")
+                if st.button("Analizar Imagen Realmente con IA"):
+                    if client:
+                        with st.spinner("Leyendo marcas y evaluando con Google Gemini..."):
+                            try:
+                                # Cargar la imagen con PIL para evitar errores de validación
+                                imagen_pil = Image.open(archivo_img)
+                                
+                                prompt = (
+                                    f"Actúa como un profesor escaneando una hoja de examen de opción múltiple de 10 preguntas. "
+                                    f"La clave oficial de respuestas correctas es: {banco_maestro}. "
+                                    f"Analiza con atención la imagen adjunta para ver qué opción (A, B, C o D) rellenó/marcó el estudiante en cada pregunta (del 1 al 10). "
+                                    f"Compara cada respuesta marcada por el estudiante con la clave oficial. "
+                                    f"Muestra los resultados detallados pregunta por pregunta indicando si está Correcta (✅) o Incorrecta (❌), y al final da la calificación total sobre 100 puntos."
+                                )
+                                
+                                response = client.models.generate_content(
+                                    model="models/gemini-3.8-flash",
+                                    contents=[imagen_pil, prompt]
+                                )
+                                
+                                st.success("¡Análisis de visión artificial completado!")
+                                st.markdown("### 📊 Resultado del Escaneo")
+                                st.write(response.text)
+                                
+                            except Exception as e:
+                                st.error(f"Error al procesar la imagen: {e}")
+                    else:
+                        st.warning("El cliente de Gemini no está configurado.")
 
     elif pin == "":
         st.info("Ingrese el PIN de docente (1234) en el menú lateral para continuar.")
