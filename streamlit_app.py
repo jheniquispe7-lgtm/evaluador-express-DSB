@@ -2,38 +2,25 @@ import streamlit as st
 import os
 import random
 import pandas as pd
+from google import genai
 
-# Configuración de la página
+# Configuración inicial de la página
 st.set_page_config(
     page_title="EVALÚA - DSB",
     page_icon="📚",
     layout="wide"
 )
 
-# --- INICIALIZACIÓN DE ESTADOS EN MEMORIA ---
-if "banco_preguntas" not in st.session_state:
-    st.session_state.banco_preguntas = [
-        {
-            "materia": "Técnicas Tecnológicas",
-            "tema": "Sistemas Web",
-            "pregunta": "¿Qué tecnología web interactiva utiliza EVALÚA - DSB?",
-            "opciones": ["A) Flask", "B) Streamlit", "C) Django", "D) PHP"],
-            "correcta": "B) Streamlit"
-        },
-        {
-            "materia": "Técnicas Tecnológicas",
-            "tema": "Inteligencia Artificial",
-            "pregunta": "¿Qué modelo de inteligencia artificial apoya en la generación de preguntas?",
-            "opciones": ["A) Google Gemini", "B) ChatGPT", "C) Claude", "D) Llama"],
-            "correcta": "A) Google Gemini"
-        }
-    ]
+# Inicializar cliente de Google Gemini
+api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=api_key) if api_key else None
 
-if "examen_activo" not in st.session_state:
-    st.session_state.examen_activo = st.session_state.banco_preguntas.copy()
-
+# Inicializar memoria de sesión
 if "calificaciones" not in st.session_state:
     st.session_state.calificaciones = []
+
+if "preguntas_generadas" not in st.session_state:
+    st.session_state.preguntas_generadas = ""
 
 # --- BANNER INSTITUCIONAL ---
 if os.path.exists("banner.jpg"):
@@ -46,7 +33,7 @@ else:
 st.title("EVALÚA - DSB: Sistema de Evaluación Digital e Impresa")
 st.markdown("---")
 
-# --- MENÚ LATERAL DE ROLES ---
+# --- PANEL LATERAL ---
 st.sidebar.title("Panel de Control")
 rol = st.sidebar.selectbox("Seleccione su Rol:", ["Estudiante", "Docente"])
 
@@ -54,120 +41,122 @@ rol = st.sidebar.selectbox("Seleccione su Rol:", ["Estudiante", "Docente"])
 # MÓDULO DOCENTE
 # ==============================================================================
 if rol == "Docente":
-    st.header("👨‍🏫 Panel de Gestión Docente")
+    st.header("👨‍🏫 Panel de Control Docente")
     
-    pin_ingresado = st.sidebar.text_input("Ingrese PIN Docente:", type="password")
-    PIN_SECRETO = "1234"
+    pin = st.sidebar.text_input("Ingrese PIN Docente:", type="password")
     
-    if pin_ingresado == PIN_SECRETO:
-        st.sidebar.success("Acceso Docente Autorizado")
+    if pin == "1234":
+        st.sidebar.success("Acceso Autorizado")
         
-        menu_docente = st.selectbox(
-            "Seleccione una herramienta:",
+        opcion = st.selectbox(
+            "Seleccione una función:",
             [
-                "1. Gestionar Banco de Preguntas",
+                "1. Generador de Preguntas con IA (Gemini)",
                 "2. Generador de Versiones Impresas (Anti-copias)",
                 "3. Escáner Óptico de Hojas Físicas",
                 "4. Registro de Calificaciones"
             ]
         )
         
-        # --- 1. BANCO DE PREGUNTAS ---
-        if menu_docente == "1. Gestionar Banco de Preguntas":
-            st.subheader("📚 Banco de Preguntas Reutilizable")
+        # --- 1. GENERADOR CON IA ---
+        if opcion == "1. Generador de Preguntas con IA (Gemini)":
+            st.subheader("🤖 Generación Rápida de Preguntas con Gemini")
+            tema = st.text_input("Ingrese el tema o contenido a evaluar:", "Partes de la computadora")
+            cantidad = st.number_input("Número de preguntas:", min_value=1, max_value=15, value=5)
             
-            with st.form("form_nueva_pregunta"):
-                st.write("Agregar nueva pregunta al banco:")
-                materia_p = st.text_input("Materia", "Técnicas Tecnológicas")
-                tema_p = st.text_input("Tema o Unidad", "Hardware")
-                pregunta_p = st.text_input("Enunciado de la pregunta")
-                op_a = st.text_input("Opción A", "A) ...")
-                op_b = st.text_input("Opción B", "B) ...")
-                op_c = st.text_input("Opción C", "C) ...")
-                op_d = st.text_input("Opción D", "D) ...")
-                correcta_p = st.selectbox("Respuesta Correcta", [op for op in [op_a, op_b, op_c, op_d] if op])
-                
-                submitted = st.form_submit_button("Guardar Pregunta")
-                if submitted and pregunta_p:
-                    st.session_state.banco_preguntas.append({
-                        "materia": materia_p,
-                        "tema": tema_p,
-                        "pregunta": pregunta_p,
-                        "opciones": [op_a, op_b, op_c, op_d],
-                        "correcta": correcta_p
-                    })
-                    st.success("¡Pregunta guardada en el banco con éxito!")
+            if st.button("Generar Preguntas"):
+                if client and tema:
+                    with st.spinner("Generando preguntas con Google Gemini..."):
+                        try:
+                            prompt = (
+                                f"Crea {cantidad} preguntas de selección múltiple con 4 opciones (A, B, C, D) "
+                                f"sobre el tema '{tema}' para estudiantes de secundaria. "
+                                f"Al final de cada pregunta indica cuál es la respuesta correcta."
+                            )
+                            response = client.models.generate_content(
+                                model="models/gemini-3.8-flash",
+                                contents=prompt
+                            )
+                            st.session_state.preguntas_generadas = response.text
+                        except Exception as e:
+                            st.error(f"Error de conexión con la IA: {e}")
+                else:
+                    st.warning("Verifique su API Key o ingrese un tema válido.")
             
-            st.markdown("### Preguntas Registradas:")
-            for i, p in enumerate(st.session_state.banco_preguntas, 1):
-                st.write(f"**{i}. [{p['tema']}] {p['pregunta']}** (Correcta: {p['correcta']})")
+            if st.session_state.preguntas_generadas:
+                st.markdown("### Preguntas Generadas:")
+                st.write(st.session_state.preguntas_generadas)
+                st.download_button(
+                    label="📥 Descargar Preguntas (.txt)",
+                    data=st.session_state.preguntas_generadas,
+                    file_name="examen_dsb.txt",
+                    mime="text/plain"
+                )
 
         # --- 2. VERSIONES IMPRESAS ---
-        elif menu_docente == "2. Generador de Versiones Impresas (Anti-copias)":
-            st.subheader("📄 Generación de Exámenes Físicos")
-            st.write("Seleccione las preguntas para generar las filas de examen:")
+        elif opcion == "2. Generador de Versiones Impresas (Anti-copias)":
+            st.subheader("📄 Generador de Filas Aleatorias (A, B, C)")
+            st.write("Pegue aquí las preguntas que desea mezclar para imprimir:")
+            texto_preguntas = st.text_area("Ingrese una pregunta por línea:", height=150)
             
-            indices_sel = []
-            for idx, p in enumerate(st.session_state.banco_preguntas):
-                if st.checkbox(f"{p['pregunta']}", value=True, key=f"ch_{idx}"):
-                    indices_sel.append(idx)
-            
-            if st.button("Generar Filas A y B"):
-                if indices_sel:
-                    preguntas_sel = [st.session_state.banco_preguntas[i] for i in indices_sel]
-                    st.markdown("---")
-                    st.markdown("### 📄 FILA A")
-                    for num, item in enumerate(preguntas_sel, 1):
-                        st.write(f"**{num}. {item['pregunta']}**")
-                        for op in item['opciones']:
-                            st.write(f"   {op}")
-                    
-                    st.markdown("---")
-                    st.markdown("### 📄 FILA B (Mezclada)")
-                    mezcla = preguntas_sel.copy()
-                    random.shuffle(mezcla)
-                    for num, item in enumerate(mezcla, 1):
-                        st.write(f"**{num}. {item['pregunta']}**")
-                        for op in item['opciones']:
-                            st.write(f"   {op}")
+            if st.button("Generar Filas Mezcladas"):
+                lineas = [l.strip() for l in texto_preguntas.split("\n") if l.strip()]
+                if len(lineas) >= 2:
+                    for fila in ["A", "B", "C"]:
+                        st.markdown(f"#### 📄 FILA {fila}")
+                        mezcla = lineas.copy()
+                        random.shuffle(mezcla)
+                        for idx, p in enumerate(mezcla, 1):
+                            st.write(f"**{idx}.** {p}")
+                        st.markdown("---")
                 else:
-                    st.warning("Seleccione al menos una pregunta.")
+                    st.warning("Ingrese al menos 2 preguntas para mezclar.")
 
         # --- 3. ESCÁNER ÓPTICO ---
-        elif menu_docente == "3. Escáner Óptico de Hojas Físicas":
-            st.subheader("📷 Escáner Óptico y Corrección")
+        elif opcion == "3. Escáner Óptico de Hojas Físicas":
+            st.subheader("📷 Escáner Óptico de Respuestas")
             nombre_est = st.text_input("Apellidos y Nombres del Estudiante:")
-            foto_hoja = st.file_uploader("Subir foto de la hoja marcada", type=["jpg", "png", "jpeg"])
+            archivo_img = st.file_uploader("Suba la fotografía de la hoja de respuestas:", type=["jpg", "png", "jpeg"])
             
-            if foto_hoja and nombre_est:
-                st.image(foto_hoja, caption="Hoja escaneada", width=300)
-                if st.button("Procesar Marcas Ópticas"):
-                    st.session_state.temp_nota = {"estudiante": nombre_est, "nota": 85}
+            if archivo_img and nombre_est:
+                st.image(archivo_img, caption="Hoja cargada", width=300)
+                if st.button("Analizar Hoja"):
+                    st.session_state.nota_escaneo = 85
                 
-                if "temp_nota" in st.session_state:
-                    nota_f = st.number_input("Nota sugerida por el escáner:", 0, 100, st.session_state.temp_nota["nota"])
-                    if st.button("Confirmar y Guardar Nota"):
+                if "nota_escaneo" in st.session_state:
+                    nota_confirmada = st.number_input(
+                        "Calificación detectada (puede ajustarla manualmente):",
+                        min_value=0,
+                        max_value=100,
+                        value=st.session_state.nota_escaneo
+                    )
+                    if st.button("Confirmar y Guardar Calificación"):
                         st.session_state.calificaciones.append({
-                            "Estudiante": st.session_state.temp_nota["estudiante"],
-                            "Tipo": "Examen Físico (Escáner)",
-                            "Nota": nota_f
+                            "Estudiante": nombre_est,
+                            "Modalidad": "Físico (Escáner)",
+                            "Nota": nota_confirmada
                         })
-                        st.success("¡Calificación guardada correctamente!")
-                        del st.session_state.temp_nota
+                        st.success("¡Calificación registrada exitosamente!")
+                        del st.session_state.nota_escaneo
 
         # --- 4. REGISTRO DE NOTAS ---
-        elif menu_docente == "4. Registro de Calificaciones":
-            st.subheader("📋 Historial de Calificaciones")
+        elif opcion == "4. Registro de Calificaciones":
+            st.subheader("📋 Registro General de Notas")
             if st.session_state.calificaciones:
                 df = pd.DataFrame(st.session_state.calificaciones)
                 st.dataframe(df, use_container_width=True)
                 csv = df.to_csv(index=False).encode("utf-8")
-                st.download_button("Descargar CSV", data=csv, file_name="notas_dsb.csv", mime="text/csv")
+                st.download_button(
+                    label="📥 Exportar Registro (CSV)",
+                    data=csv,
+                    file_name="registro_notas_dsb.csv",
+                    mime="text/csv"
+                )
             else:
-                st.info("Aún no hay calificaciones registradas.")
+                st.info("Aún no existen calificaciones registradas.")
 
-    elif pin_ingresado == "":
-        st.info("Ingrese el PIN (1234) en el panel izquierdo.")
+    elif pin == "":
+        st.info("Ingrese el PIN de docente en el menú lateral para continuar.")
     else:
         st.error("PIN incorrecto.")
 
@@ -182,25 +171,31 @@ elif rol == "Estudiante":
         st.subheader("Examen Activo: Evaluación de Conocimientos")
         st.write("Responda las siguientes interrogantes:")
         
-        respuestas_est = {}
-        for i, p in enumerate(st.session_state.banco_preguntas):
-            respuestas_est[i] = st.radio(f"**{i+1}. {p['pregunta']}**", p["opciones"], key=f"r_{i}")
+        r1 = st.radio(
+            "1. ¿Qué tecnología web interactiva utiliza EVALÚA - DSB?",
+            ["A) Flask", "B) Streamlit", "C) Django", "D) PHP"]
+        )
+        
+        r2 = st.radio(
+            "2. ¿Qué modelo de inteligencia artificial apoya en la generación de preguntas?",
+            ["A) Google Gemini", "B) ChatGPT", "C) Claude", "D) Llama"]
+        )
         
         if st.button("Enviar Examen"):
-            correctas = 0
-            for i, p in enumerate(st.session_state.banco_preguntas):
-                if respuestas_est[i] == p["correcta"]:
-                    correctas += 1
-            
-            nota_final = round((correctas / len(st.session_state.banco_preguntas)) * 100)
+            puntaje = 0
+            if r1 == "B) Streamlit":
+                puntaje += 50
+            if r2 == "A) Google Gemini":
+                puntaje += 50
+                
             st.success(f"¡Examen enviado con éxito, {nombre_alumno}!")
             st.markdown("### Calificación Automática")
-            st.metric(label="", value=f"{nota_final} / 100 pts")
+            st.metric(label="", value=f"{puntaje} / 100 pts")
             
             st.session_state.calificaciones.append({
                 "Estudiante": nombre_alumno,
-                "Tipo": "Examen Digital en Línea",
-                "Nota": nota_final
+                "Modalidad": "En Línea",
+                "Nota": puntaje
             })
     else:
-        st.warning("Ingrese su nombre completo para habilitar el examen.")
+        st.warning("Por favor, ingrese sus apellidos y nombres para habilitar el examen.")
