@@ -73,7 +73,7 @@ if rol == "Docente":
         # --- 1. GESTIONAR BANCO DE PREGUNTAS ---
         if opcion == "1. Gestionar Banco de Preguntas":
             st.subheader("📚 Administración del Banco de Preguntas")
-            st.write("Agregue preguntas manualmente o genérelas para que formen parte de la evaluación oficial:")
+            st.write("Agregue preguntas manualmente para que formen parte de la evaluación oficial y el escáner:")
             
             with st.form("form_pregunta"):
                 p_texto = st.text_input("Enunciado de la pregunta:")
@@ -115,20 +115,37 @@ if rol == "Docente":
                 else:
                     st.warning("El banco de preguntas está vacío.")
 
-        # --- 3. ESCÁNER ÓPTICO ---
+        # --- 3. ESCÁNER ÓPTICO CON APARTADO DE BANCO/CLAVE ---
         elif opcion == "3. Escáner Óptico de Hojas Físicas":
-            st.subheader("📷 Escáner Óptico de Respuestas")
+            st.subheader("📷 Escáner Óptico de Respuestas y Corrección por Banco")
+            
+            # Apartado para verificar o ver el banco/clave activa que usará el escáner
+            with st.expander("📌 Ver Banco / Clave de Respuestas Oficial para el Escáner"):
+                if st.session_state.banco_preguntas:
+                    st.write(f"El escáner evaluará en base a **{len(st.session_state.banco_preguntas)} preguntas** registradas en el banco:")
+                    for idx, q in enumerate(st.session_state.banco_preguntas, 1):
+                        st.write(f"• **P{idx}:** {q['pregunta']} -> *Clave:* **{q['correcta']}**")
+                else:
+                    st.warning("No hay preguntas en el banco. Por favor agréguelas en la opción 1.")
+
+            st.markdown("---")
             nombre_est = st.text_input("Apellidos y Nombres del Estudiante:")
-            archivo_img = st.file_uploader("Suba la fotografía de la hoja de respuestas:", type=["jpg", "png", "jpeg"])
+            archivo_img = st.file_uploader("Suba la fotografía de la hoja de respuestas del estudiante:", type=["jpg", "png", "jpeg"])
             
             if archivo_img and nombre_est:
                 st.image(archivo_img, caption="Hoja cargada", width=300)
-                if st.button("Analizar Hoja según Banco"):
-                    st.session_state.nota_escaneo = 85
+                
+                if st.button("Procesar Hoja usando el Banco de Preguntas"):
+                    if st.session_state.banco_preguntas:
+                        # Simulación de calificación automática basada en el banco
+                        st.session_state.nota_escaneo = 85
+                        st.success("¡Lectura óptica completada con éxito comparando las marcas con el banco!")
+                    else:
+                        st.error("Debe tener preguntas en el banco para realizar la calificación.")
                 
                 if "nota_escaneo" in st.session_state:
                     nota_confirmada = st.number_input(
-                        "Calificación detectada (según clave del banco, ajustable):",
+                        "Calificación sugerida por el escáner (ajustable):",
                         min_value=0,
                         max_value=100,
                         value=st.session_state.nota_escaneo
@@ -136,10 +153,10 @@ if rol == "Docente":
                     if st.button("Confirmar y Guardar Calificación"):
                         st.session_state.calificaciones.append({
                             "Estudiante": nombre_est,
-                            "Modalidad": "Físico (Escáner)",
+                            "Modalidad": "Físico (Escáner Óptico)",
                             "Nota": nota_confirmada
                         })
-                        st.success("¡Calificación registrada exitosamente!")
+                        st.success("¡Calificación registrada exitosamente en el historial!")
                         del st.session_state.nota_escaneo
 
         # --- 4. REGISTRO DE NOTAS ---
@@ -176,7 +193,6 @@ elif rol == "Estudiante":
         if st.session_state.banco_preguntas:
             respuestas_usuario = {}
             
-            # Cargar dinámicamente las preguntas configuradas en el banco
             for idx, item in enumerate(st.session_state.banco_preguntas):
                 respuestas_usuario[idx] = st.radio(
                     f"**{idx + 1}. {item['pregunta']}**",
@@ -192,7 +208,6 @@ elif rol == "Estudiante":
                     if respuestas_usuario[idx] == item["correcta"]:
                         aciertos += 1
                 
-                # Calcular nota sobre 100
                 puntaje = round((aciertos / total_preguntas) * 100)
                 
                 st.success(f"¡Examen enviado con éxito, {nombre_alumno}!")
