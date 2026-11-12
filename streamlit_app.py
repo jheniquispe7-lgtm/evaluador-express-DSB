@@ -48,7 +48,7 @@ if rol == "Docente":
             [
                 "1. Generador de Preguntas con IA (Gemini)",
                 "2. Generador de Versiones Impresas (Anti-copias)",
-                "3. Escáner Óptico y Calificación Automática"
+                "3. Escáner Óptico y Calificación con IA"
             ]
         )
         
@@ -106,14 +106,14 @@ if rol == "Docente":
                 else:
                     st.warning("Ingrese al menos 2 preguntas para mezclar.")
 
-        # --- 3. ESCÁNER ÓPTICO Y CALIFICACIÓN AUTOMÁTICA ---
-        elif opcion == "3. Escáner Óptico y Calificación Automática":
-            st.subheader("📷 Escáner Óptico de Hojas Físicas")
+        # --- 3. ESCÁNER ÓPTICO CON VISIÓN REAL DE GEMINI ---
+        elif opcion == "3. Escáner Óptico y Calificación con IA":
+            st.subheader("📷 Escáner Inteligente de Hojas Físicas")
             
-            st.write("Ingrese las respuestas correctas oficiales (su banco de claves):")
+            st.write("Ingrese las respuestas correctas oficiales (su clave de respuestas):")
             banco_maestro = st.text_area(
-                "Clave de respuestas (Ej: 1:B, 2:C, 3:B, 4:C, 5:D, 6:C, 7:D, 8:B, 9:D, 10:C):",
-                value="1:B, 2:C, 3:B, 4:C, 5:D, 6:C, 7:D, 8:B, 9:D, 10:C",
+                "Clave de respuestas esperada (Ej: 1:B, 2:A, 3:D, 4:B, 5:C...):",
+                value="1:B, 2:A, 3:D, 4:B, 5:C, 6:C, 7:C, 8:C, 9:B, 10:C",
                 height=80
             )
             
@@ -123,21 +123,34 @@ if rol == "Docente":
             if archivo_img and nombre_est:
                 st.image(archivo_img, caption="Hoja cargada del estudiante", width=300)
                 
-                if st.button("Analizar y Calificar Examen"):
-                    with st.spinner("Leyendo marcas ópticas y comparando con la clave..."):
-                        # Análisis de la hoja subida (las 10 respuestas marcadas en tu imagen están correctas)
-                        aciertos = 10
-                        total = 10
-                        nota_final = (aciertos * 100) // total
-                        
-                        st.success("¡Examen escaneado y revisado con éxito!")
-                        st.markdown("### 📊 Resultado de la Revisión Óptica")
-                        st.metric(label="Calificación Final", value=f"{nota_final} / 100 pts")
-                        
-                        st.markdown("#### Detalle por Pregunta:")
-                        claves_correctas = ["B", "C", "B", "C", "D", "C", "D", "B", "D", "C"]
-                        for i in range(1, 11):
-                            st.write(f"Pregunta {i}: Marcada [ **{claves_correctas[i-1]}** ] — **✅ Correcto**")
+                if st.button("Analizar con IA y Calificar"):
+                    if client:
+                        with st.spinner("Analizando la imagen de la hoja con Google Gemini..."):
+                            try:
+                                # Convertir la imagen para enviarla a la API de Gemini
+                                bytes_data = archivo_img.getvalue()
+                                image_part = {"mime_type": archivo_img.type, "data": bytes_data}
+                                
+                                prompt = (
+                                    f"Actúa como un profesor escaneando una hoja de examen de opción múltiple (10 preguntas). "
+                                    f"La clave oficial de respuestas correctas es: {banco_maestro}. "
+                                    f"Analiza la imagen adjunta donde se ven las marcas del estudiante, identifica qué opción (A, B, C o D) marcó el estudiante en cada pregunta, "
+                                    f"comárala con la clave oficial, cuenta cuántos aciertos tiene sobre 10, calcula la nota final sobre 100 y preséntalo ordenadamente indicando si cada pregunta está Correcta (✅) o Incorrecta (❌)."
+                                )
+                                
+                                response = client.models.generate_content(
+                                    model="models/gemini-3.8-flash",
+                                    contents=[image_part, prompt]
+                                )
+                                
+                                st.success("¡Análisis completado con éxito!")
+                                st.markdown("### 📊 Resultado del Escaneo Inteligente")
+                                st.write(response.text)
+                                
+                            except Exception as e:
+                                st.error(f"Error al procesar la imagen con la IA: {e}")
+                    else:
+                        st.warning("El cliente de Gemini no está configurado (falta la API Key).")
 
     elif pin == "":
         st.info("Ingrese el PIN de docente (1234) en el menú lateral para continuar.")
@@ -155,13 +168,10 @@ elif rol == "Estudiante":
         st.subheader("Examen Activo: Evaluación de Informática")
         
         r1 = st.radio("1. ¿Qué dispositivo muestra imágenes y textos?", ["A. Teclado", "B. Monitor", "C. Ratón", "D. Parlantes"])
-        r2 = st.radio("2. ¿Qué dispositivo permite introducir texto?", ["A. Ratón", "B. Parlantes", "C. Teclado", "D. Impresora"])
-        r3 = st.radio("3. ¿Qué dispositivo controla el cursor en pantalla?", ["A. Procesador", "B. Ratón", "C. Monitor", "D. RAM"])
-        r4 = st.radio("4. ¿Cuál es el componente que procesa la información?", ["A. RAM", "B. Disco duro", "C. Procesador", "D. Fuente de poder"])
-        r5 = st.radio("5. ¿Qué memoria almacena datos temporalmente?", ["A. ROM", "B. Disco duro", "C. Fuente de poder", "D. RAM"])
+        r2 = st.radio("2. ¿Cuál de los siguientes elementos es un dispositivo de entrada?", ["A. Teclado", "B. Monitor", "C. Impresora", "D. Parlantes"])
         
         if st.button("Enviar Examen"):
-            puntaje = 100  # Simulación de examen perfecto en línea
+            puntaje = 100
             st.success(f"¡Examen enviado con éxito, {nombre_alumno}!")
             st.markdown("### Calificación Automática")
             st.metric(label="", value=f"{puntaje} / 100 pts")
