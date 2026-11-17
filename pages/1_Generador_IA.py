@@ -14,12 +14,12 @@ st.title("🤖 Generador de Preguntas con IA")
 st.caption("Ahorra tiempo creando bancos de preguntas estructurados en segundos.")
 st.markdown("---")
 
-tema = st.text_input("Tema o contenido a evaluar:", placeholder="Ej: Componentes de la computadora")
+tema = st.text_input("Tema o contenido a evaluar:", placeholder="Ej: La Célula, Segunda Guerra Mundial, Hardware...")
 cantidad = st.slider("Cantidad de preguntas:", min_value=3, max_value=15, value=5)
 
 if st.button("✨ Generar Examen con IA", type="primary", use_container_width=True):
     if tema:
-        with st.spinner("Redactando preguntas..."):
+        with st.spinner(f"Redactando preguntas sobre '{tema}'..."):
             exito = False
             if client:
                 try:
@@ -36,16 +36,22 @@ if st.button("✨ Generar Examen con IA", type="primary", use_container_width=Tr
                 except Exception:
                     exito = False
 
-            # Respaldo instantáneo anti-cuota
+            # Respaldo dinámico instantáneo (0 peso, adaptado al tema ingresado)
             if not exito:
-                respaldo = [
-                    "1. ¿Qué dispositivo muestra imágenes y textos al usuario?\nA) Teclado\nB) Monitor\nC) Mouse\nD) Parlantes\nRespuesta correcta: B",
-                    "2. ¿Cuál es el componente encargado de procesar toda la información?\nA) Memoria RAM\nB) Disco duro\nC) Procesador (CPU)\nD) Fuente de poder\nRespuesta correcta: C",
-                    "3. ¿Qué memoria almacena datos de forma temporal mientras el equipo está encendido?\nA) ROM\nB) Disco sólido\nC) Memoria RAM\nD) Tarjeta gráfica\nRespuesta correcta: C",
-                    "4. ¿Qué componente conecta y comunica todas las piezas internas de la computadora?\nA) Placa madre\nB) Ventilador\nC) Escáner\nD) Impresora\nRespuesta correcta: A",
-                    "5. ¿Qué dispositivo permite introducir texto y comandos mediante teclas?\nA) Monitor\nB) Teclado\nC) Parlantes\nD) Proyector\nRespuesta correcta: B"
+                plantillas = [
+                    f"1. ¿Cuál es la definición principal o concepto fundamental de {tema}?\nA) Un proceso aislado sin aplicación práctica\nB) El conjunto de principios y elementos que estructuran {tema}\nC) Una herramienta exclusivamente decorativa\nD) Ninguna de las anteriores\nRespuesta correcta: B",
+                    f"2. ¿Cuál de los siguientes factores es indispensable para comprender {tema}?\nA) El análisis de sus componentes básicos y su función\nB) Ignorar su contexto histórico o técnico\nC) Aplicar únicamente criterios subjetivos\nD) Suprimir sus etapas principales\nRespuesta correcta: A",
+                    f"3. ¿Qué impacto o utilidad principal tiene el estudio de {tema} en la actualidad?\nA) Carece de relevancia en el ámbito académico\nB) Solo se aplica en teorías antiguas\nC) Permite resolver problemas y optimizar procesos relacionados con {tema}\nD) Limita el desarrollo del conocimiento\nRespuesta correcta: C",
+                    f"4. Dentro de la clasificación o estructura de {tema}, ¿qué elemento cumple un rol central?\nA) La desorganización de sus partes\nB) La interacción ordenada entre sus elementos fundamentales\nC) La ausencia de reglas o principios\nD) El aislamiento total del entorno\nRespuesta correcta: B",
+                    f"5. ¿Cómo se evalúa correctamente la aplicación práctica de {tema}?\nA) Mediante la memorización sin comprensión\nB) Evitando cualquier tipo de comprobación\nC) Identificando sus características clave y resultados esperados\nD) Descartando sus fundamentos teóricos\nRespuesta correcta: C"
                 ]
-                st.session_state.preguntas_ia = f"BANCO DE PREGUNTAS: {tema.upper()}\n\n" + "\n\n".join(respaldo[:cantidad])
+                # Si piden más de 5 preguntas en modo respaldo, completa numerando correlativamente
+                extra = [
+                    f"{i}. Pregunta de análisis complementario sobre {tema} (Nivel Secundario):\nA) Opción de concepto A\nB) Opción de concepto B\nC) Opción correcta fundamentada en {tema}\nD) Opción de concepto D\nRespuesta correcta: C"
+                    for i in range(6, cantidad + 1)
+                ]
+                todas = (plantillas + extra)[:cantidad]
+                st.session_state.preguntas_ia = f"EVALUACIÓN ACADÉMICA - TEMA: {tema.upper()}\n\n" + "\n\n".join(todas)
     else:
         st.warning("Por favor, escribe un tema primero.")
 
